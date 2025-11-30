@@ -1,0 +1,269 @@
+/* ===== BASE ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f7fa;
+  color: #333;
+}
+
+.layout-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: visible !important;
+}
+
+/* ===== HEADER ===== */
+.layout-header {
+  background: #3246a8;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 9999 !important;   /* ⬅ dropdown stays above everything */
+}
+
+.header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Brand / Title */
+.brand-name {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ===== NAV ===== */
+.desktop-nav {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-link {
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.9);
+  transition: background 0.2s ease;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.nav-link.active {
+  background: rgba(255, 255, 255, 0.25);
+  font-weight: 600;
+}
+
+/* ===== USER MENU ===== */
+.user-menu {
+  position: relative !important;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  z-index: 20000 !important; /* ⬅ VERY important */
+}
+
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #f97373;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.user-email {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.arrow {
+  font-size: 10px;
+}
+
+/* ===== DROPDOWN FIXED ===== */
+.user-dropdown {
+  position: absolute !important;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 240px;
+  background: #fff;
+  color: #111827;
+  border-radius: 10px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  z-index: 999999 !important;   /* ⬅ highest priority */
+  overflow: visible !important;
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.avatar-big {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #3246a8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.dropdown-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dropdown-email {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.dropdown-item {
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.dropdown-item.logout {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 4px;
+  color: #b91c1c;
+}
+
+.dropdown-item.logout:hover {
+  background: #fef2f2;
+}
+
+/* ===== MAIN ===== */
+.layout-main {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 16px;
+  overflow: visible !important;
+}
+
+.layout-container {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  overflow: visible !important;   /* ⬅ FIX: prevents clipping */
+}
+
+/* ===== FOOTER ===== */
+.layout-footer {
+  margin-top: auto;
+  padding: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  background: #f3f4f6;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .header-container {
+    gap: 10px;
+  }
+
+  .desktop-nav {
+    display: none;
+  }
+
+  .brand-name {
+    font-size: 16px;
+  }
+
+  .user-details {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .layout-main {
+    padding: 16px 10px;
+  }
+
+  .layout-container {
+    padding: 16px;
+  }
+
+  .layout-footer {
+    font-size: 12px;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
