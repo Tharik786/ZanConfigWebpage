@@ -2,7 +2,10 @@
 import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import "../styles/Login.css";
-import { API_BASE } from "../api";
+
+// ⭐ FIX: Local API_BASE instead of importing from api.js
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000/api";
 
 export default function Login() {
   const [form, setForm] = useState({ username: "", password: "" });
@@ -181,7 +184,7 @@ export default function Login() {
           </form>
         )}
 
-        {/* SIGNUP FORM */}
+        {/* SIGNUP */}
         {showSignup && (
           <form className="login-form" onSubmit={handleSignupSubmit}>
             <h2 className="form-title">Create Account</h2>
@@ -236,7 +239,7 @@ export default function Login() {
           </form>
         )}
 
-        {/* FORGOT PASSWORD FORM */}
+        {/* FORGOT */}
         {showForgot && (
           <form className="login-form" onSubmit={handleForgotSubmit}>
             <h2 className="form-title">Reset Password</h2>
