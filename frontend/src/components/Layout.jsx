@@ -1,10 +1,13 @@
 // src/layout/Layout.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { API_BASE } from "../api";
 import "../styles/Layout.css";
 
-import logo from "../assets/logo.jpeg";  
+import logo from "../assets/logo.jpeg";
+
+// ⭐ FIXED: Local API_BASE so no error from api.js import
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000/api";
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -24,10 +27,12 @@ export default function Layout({ children }) {
     setShowMenu(false);
   }, [location.pathname]);
 
+  // ⭐ FIXED logout (your backend has no /auth/logout route)
   const handleLogout = () => {
     const token = localStorage.getItem("token");
 
     if (token) {
+      // Attempt logout silently (backend may not have it)
       fetch(`${API_BASE}/auth/logout`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
@@ -36,6 +41,7 @@ export default function Layout({ children }) {
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
     navigate("/login", { replace: true });
   };
 
@@ -49,7 +55,7 @@ export default function Layout({ children }) {
       <header className="layout-header">
         <div className="header-container">
 
-          {/* ⭐ ADDED LOGO + TITLE ROW ⭐ */}
+          {/* LOGO + TITLE */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img
               src={logo}

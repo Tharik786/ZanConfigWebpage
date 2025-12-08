@@ -1,17 +1,30 @@
-/* ===== BASE ===== */
+/* ======================================================================
+   GLOBAL BASE RESET
+====================================================================== */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: auto !important;
+  overflow: visible !important;
+  background: #f5f7fa;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  scroll-behavior: smooth;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  scroll-behavior: smooth;
 }
 
-body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: #f5f7fa;
-  color: #333;
+#root {
+  min-height: 100vh;
 }
 
+/* ======================================================================
+   LAYOUT WRAPPER
+====================================================================== */
 .layout-wrapper {
   display: flex;
   flex-direction: column;
@@ -19,13 +32,16 @@ body {
   overflow: visible !important;
 }
 
-/* ===== HEADER ===== */
+/* ======================================================================
+   HEADER + NAVBAR (OLD UI EXACT)
+====================================================================== */
 .layout-header {
   background: #3246a8;
   color: #fff;
   position: sticky;
   top: 0;
-  z-index: 9999 !important;   /* ⬅ dropdown stays above everything */
+  z-index: 99999 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
 }
 
 .header-container {
@@ -38,13 +54,13 @@ body {
   gap: 16px;
 }
 
-/* Brand / Title */
+/* Brand */
 .brand-name {
   font-size: 18px;
   font-weight: 600;
 }
 
-/* ===== NAV ===== */
+/* Nav */
 .desktop-nav {
   display: flex;
   gap: 8px;
@@ -60,24 +76,24 @@ body {
   color: rgba(255, 255, 255, 0.9);
   transition: background 0.2s ease;
 }
-
 .nav-link:hover {
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
 }
-
 .nav-link.active {
   background: rgba(255, 255, 255, 0.25);
   font-weight: 600;
 }
 
-/* ===== USER MENU ===== */
+/* ======================================================================
+   USER MENU + DROPDOWN
+====================================================================== */
 .user-menu {
   position: relative !important;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  z-index: 20000 !important; /* ⬅ VERY important */
+  z-index: 20000 !important;
 }
 
 .user-box {
@@ -86,8 +102,8 @@ body {
   gap: 8px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
   cursor: pointer;
 }
 
@@ -123,7 +139,6 @@ body {
   font-size: 10px;
 }
 
-/* ===== DROPDOWN FIXED ===== */
 .user-dropdown {
   position: absolute !important;
   top: calc(100% + 10px);
@@ -132,10 +147,9 @@ body {
   background: #fff;
   color: #111827;
   border-radius: 10px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
   padding: 8px 0;
-  z-index: 999999 !important;   /* ⬅ highest priority */
-  overflow: visible !important;
+  z-index: 999999 !important;
 }
 
 .dropdown-header {
@@ -172,12 +186,11 @@ body {
 .dropdown-item {
   padding: 8px 14px;
   font-size: 14px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
+  cursor: pointer;
 }
-
 .dropdown-item:hover {
   background: #f3f4f6;
 }
@@ -187,12 +200,13 @@ body {
   margin-top: 4px;
   color: #b91c1c;
 }
-
 .dropdown-item.logout:hover {
   background: #fef2f2;
 }
 
-/* ===== MAIN ===== */
+/* ======================================================================
+   MAIN CONTENT WRAPPER
+====================================================================== */
 .layout-main {
   flex: 1;
   max-width: 1200px;
@@ -207,35 +221,228 @@ body {
   border-radius: 10px;
   padding: 20px;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
-  overflow: visible !important;   /* ⬅ FIX: prevents clipping */
+  overflow: visible !important;
 }
 
-/* ===== FOOTER ===== */
-.layout-footer {
-  margin-top: auto;
-  padding: 14px;
-  text-align: center;
+/* ======================================================================
+   PAGE WRAPPERS
+====================================================================== */
+.page1,
+.add-client-page {
+  padding: 24px;
+  height: auto !important;
+  min-height: auto !important;
+  overflow: visible !important;
+}
+
+/* ======================================================================
+   TABLE WRAPPER + STICKY COLUMN FIX
+====================================================================== */
+.table-wrapper {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  position: relative;
+}
+
+.client-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.client-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.client-table thead {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 20;
+}
+
+.client-table th,
+.client-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+  white-space: nowrap;
+}
+
+/* ===== STICKY ACTION COLUMN USING .sticky-col ===== */
+.client-table th.sticky-col,
+.client-table td.sticky-col {
+  position: sticky;
+  right: 0;
+  background: #ffffff;
+  z-index: 40;
+  box-shadow: -4px 0 6px rgba(0,0,0,0.08);
+}
+
+/* ======================================================================
+   EDIT BUTTON INSIDE STICKY COLUMN
+====================================================================== */
+.edit-btn {
+  position: relative;   /* no extra sticky, just higher layer */
+  z-index: 50;
+}
+
+/* ======================================================================
+   FORM + INPUT GRID
+====================================================================== */
+.form-step {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px solid #e5e7eb;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.label {
   font-size: 13px;
-  color: #666;
-  background: #f3f4f6;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 900px) {
-  .header-container {
-    gap: 10px;
-  }
+.input,
+textarea,
+select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
 
+/* ======================================================================
+   BUTTONS
+====================================================================== */
+.btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn.primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn.secondary {
+  background: #e0e0e0;
+}
+
+/* Outline button (used for Edit links) */
+.btn.hollow {
+  background: transparent;
+  color: #3246a8;
+  border: 1px solid #3246a8;
+}
+
+/* Danger button (used for Delete) */
+.btn.danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Form actions */
+.form-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.form-actions.space-between {
+  justify-content: space-between;
+}
+
+/* ======================================================================
+   TAB NAVIGATION (used in ClientList.jsx)
+====================================================================== */
+.tab-nav-modern {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  padding: 20px 0;
+  margin-bottom: 10px;
+}
+
+.tab-modern-btn {
+  padding: 10px 22px;
+  border-radius: 30px;
+  border: 2px solid #d8d8d8;
+  background: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  color: #444;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.tab-modern-btn:hover {
+  border-color: #b0b0ff;
+}
+
+.tab-modern-btn.active {
+  background: #6c63ff;
+  border-color: #6c63ff;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(108, 99, 255, 0.35);
+}
+
+/* ======================================================================
+   SUCCESS POPUP
+====================================================================== */
+.success-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999999;
+}
+
+.success-box {
+  background: white;
+  padding: 30px;
+  border-radius: 14px;
+  width: 400px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+
+/* ======================================================================
+   RESPONSIVENESS
+====================================================================== */
+@media (max-width: 900px) {
   .desktop-nav {
     display: none;
   }
-
-  .brand-name {
-    font-size: 16px;
-  }
-
   .user-details {
     display: none;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -243,17 +450,17 @@ body {
   .layout-main {
     padding: 16px 10px;
   }
-
   .layout-container {
     padding: 16px;
   }
-
-  .layout-footer {
-    font-size: 12px;
+  .form-step {
+    padding: 16px;
   }
 }
 
-/* Scrollbar */
+/* ======================================================================
+   SCROLLBAR
+====================================================================== */
 ::-webkit-scrollbar {
   width: 8px;
 }
