@@ -1,6 +1,6 @@
 // src/pages/Login.jsx
 import React, { useState } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, Link } from "react-router-dom";
 import "../styles/Login.css";
 
 const API_BASE =
@@ -8,7 +8,6 @@ const API_BASE =
 
 export default function Login() {
   const navigate = useNavigate();
-
   const [isPanelActive, setIsPanelActive] = useState(false);
 
   // LOGIN FORM
@@ -28,17 +27,12 @@ export default function Login() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Already logged in
-  const token = localStorage.getItem("token");
-  if (token) return <Navigate to="/" replace />;
+  // If token exists → redirect
+  if (localStorage.getItem("token")) {
+    return <Navigate to="/" replace />;
+  }
 
-  // ---------------- LOGIN HANDLERS ----------------
-  const handleLoginChange = (e) => {
-    setLoginForm({ ...loginForm, [e.target.name]: e.target.value });
-    setError("");
-    setSuccess("");
-  };
-
+  // ---------------- LOGIN ----------------
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -56,30 +50,22 @@ export default function Login() {
         body: JSON.stringify(loginForm),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json();
 
       if (!res.ok || data.ok === false) {
         setError(data.error || "Invalid username or password!");
         return;
       }
 
-      // Login success
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/", { replace: true });
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("Network error. Please try again.");
     }
   };
 
-  // ---------------- SIGNUP HANDLERS ----------------
-  const handleSignupChange = (e) => {
-    setSignupForm({ ...signupForm, [e.target.name]: e.target.value });
-    setError("");
-    setSuccess("");
-  };
-
+  // ---------------- SIGNUP ----------------
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -87,13 +73,11 @@ export default function Login() {
 
     const { username, email, password, confirmPassword } = signupForm;
 
-    // Required fields
     if (!username || !email || !password || !confirmPassword) {
       setError("Please fill in all fields.");
       return;
     }
 
-    // Password match
     if (password !== confirmPassword) {
       setError("Passwords do not match!");
       return;
@@ -106,11 +90,9 @@ export default function Login() {
         body: JSON.stringify(signupForm),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json();
 
-      // Handle backend validation
       if (!res.ok || data.ok === false) {
-        // Check backend string patterns
         if (data.error?.includes("username")) {
           setError("Username already exists!");
         } else if (data.error?.includes("email")) {
@@ -121,30 +103,25 @@ export default function Login() {
         return;
       }
 
-      // SUCCESS
       setSuccess("Account created successfully! Please sign in.");
       setIsPanelActive(false);
 
-      // Clear fields
       setSignupForm({
         username: "",
         email: "",
         password: "",
         confirmPassword: "",
       });
-
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("Registration failed. Please try again.");
     }
   };
 
-  // ---------------- RENDER ----------------
   return (
     <div className="login-page-global">
       <div className={`auth-wrapper ${isPanelActive ? "panel-active" : ""}`}>
 
-        {/* ALERT MESSAGES */}
+        {/* ALERTS */}
         {error && <div className="alert error-alert">{error}</div>}
         {success && <div className="alert success-alert">{success}</div>}
 
@@ -166,7 +143,9 @@ export default function Login() {
               name="username"
               placeholder="Full Name"
               value={signupForm.username}
-              onChange={handleSignupChange}
+              onChange={(e) =>
+                setSignupForm({ ...signupForm, [e.target.name]: e.target.value })
+              }
               required
             />
 
@@ -175,7 +154,9 @@ export default function Login() {
               name="email"
               placeholder="Email Address"
               value={signupForm.email}
-              onChange={handleSignupChange}
+              onChange={(e) =>
+                setSignupForm({ ...signupForm, [e.target.name]: e.target.value })
+              }
               required
             />
 
@@ -184,7 +165,9 @@ export default function Login() {
               name="password"
               placeholder="Password"
               value={signupForm.password}
-              onChange={handleSignupChange}
+              onChange={(e) =>
+                setSignupForm({ ...signupForm, [e.target.name]: e.target.value })
+              }
               required
             />
 
@@ -193,7 +176,9 @@ export default function Login() {
               name="confirmPassword"
               placeholder="Confirm Password"
               value={signupForm.confirmPassword}
-              onChange={handleSignupChange}
+              onChange={(e) =>
+                setSignupForm({ ...signupForm, [e.target.name]: e.target.value })
+              }
               required
             />
 
@@ -219,7 +204,9 @@ export default function Login() {
               name="username"
               placeholder="Email Address"
               value={loginForm.username}
-              onChange={handleLoginChange}
+              onChange={(e) =>
+                setLoginForm({ ...loginForm, [e.target.name]: e.target.value })
+              }
               required
             />
 
@@ -228,25 +215,26 @@ export default function Login() {
               name="password"
               placeholder="Password"
               value={loginForm.password}
-              onChange={handleLoginChange}
+              onChange={(e) =>
+                setLoginForm({ ...loginForm, [e.target.name]: e.target.value })
+              }
               required
             />
 
-            <a href="#">Forgot your password?</a>
+            {/* Correct Forgot Password Route */}
+            <Link to="/forgot-password">Forgot your password?</Link>
 
             <button type="submit">Sign In</button>
           </form>
         </div>
 
-        {/* RIGHT SLIDE PANEL */}
+        {/* SLIDE PANELS */}
         <div className="slide-panel-wrapper">
           <div className="slide-panel">
-
             <div className="panel-content panel-content-left">
               <h1>Welcome Back!</h1>
               <p>Stay connected by logging in with your credentials.</p>
               <button
-                type="button"
                 className="transparent-btn"
                 onClick={() => setIsPanelActive(false)}
               >
@@ -255,17 +243,15 @@ export default function Login() {
             </div>
 
             <div className="panel-content panel-content-right">
-              <h1>Hello!</h1>
-              <p>Create your account and join us today.</p>
+              <h1>Hey There!</h1>
+              <p>Begin your amazing journey by creating an account today.</p>
               <button
-                type="button"
                 className="transparent-btn"
                 onClick={() => setIsPanelActive(true)}
               >
                 Sign Up
               </button>
             </div>
-
           </div>
         </div>
 

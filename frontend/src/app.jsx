@@ -9,7 +9,9 @@ import ClientList from "./pages/ClientList";
 import EditClient from "./pages/EditClient";
 import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
+
 import Login from "./components/Login";
+import ForgotPassword from "./pages/forgotpassword"; 
 
 function isAuthed() {
   return Boolean(localStorage.getItem("token"));
@@ -22,8 +24,12 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
 
+      {/* PUBLIC ROUTES */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      {/* PROTECTED ROUTES */}
       <Route
         path="/"
         element={
@@ -90,7 +96,9 @@ export default function App() {
         }
       />
 
+      {/* DEFAULT REDIRECT */}
       <Route path="*" element={<Navigate to="/" replace />} />
+
     </Routes>
   );
 }
