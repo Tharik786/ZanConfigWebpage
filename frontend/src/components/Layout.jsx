@@ -7,7 +7,7 @@ import logo from "../assets/logo.jpeg";
 
 // ⭐ FIXED: Local API_BASE so no error from api.js import
 const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000/api";
+  import.meta.env.VITE_API_BASE || "/api";
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -67,7 +67,7 @@ export default function Layout({ children }) {
                 borderRadius: 6,
               }}
             />
-            <h2 className="brand-name">ZanConfig Client App</h2>
+            <h2 className="brand-name">ZanConfig App</h2>
           </div>
 
           {/* NAVIGATION */}
@@ -119,11 +119,6 @@ export default function Layout({ children }) {
       <main className="layout-main">
         <div className="layout-container">{children}</div>
       </main>
-
-      {/* FOOTER */}
-      <footer className="layout-footer">
-        <p>© 2025 ZanConfig. Client Configuration Manager.</p>
-      </footer>
     </div>
   );
 }

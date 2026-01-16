@@ -1,52 +1,51 @@
-// ===============================================
-// src/api.js  (FINAL UPDATED VERSION WITH DEFAULTS API)
-// ===============================================
+// =====================================================
+// src/api.js
+// FINAL – DYNAMIC YEAR/MONTH + AUTH + CRUD (PRODUCTION)
+// =====================================================
 
-// Loads backend URL from .env → VITE_API_BASE
-// Fallback for local dev → http://127.0.0.1:5000/api
 export const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000/api";
+  import.meta.env.VITE_API_BASE || "/api";
 
-// -----------------------------------------------
-// SAFE REQUEST WRAPPER
-// -----------------------------------------------
+// =====================================================
+// SAFE REQUEST HELPER (JSON + AUTH SAFE)
+// =====================================================
 async function safeRequest(path, options = {}) {
-  try {
-    const url = `${API_BASE}${path}`;
+  const url = `${API_BASE}${path}`;
 
-    const fetchOptions = {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
-    };
+  const fetchOptions = {
+    credentials: "same-origin",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  };
 
-    // For GET → backend MUST NOT receive a body
-    if (fetchOptions.method === "GET") {
-      delete fetchOptions.body;
-    }
-
-    const res = await fetch(url, fetchOptions);
-
-    const text = await res.text();
-    const data = text ? JSON.parse(text) : null;
-
-    if (!res.ok) {
-      throw new Error(data?.error || "Request failed");
-    }
-
-    return data;
-  } catch (err) {
-    console.error("API ERROR:", err);
-    throw err;
+  // 🚫 GET must not send body
+  if (!fetchOptions.method || fetchOptions.method === "GET") {
+    delete fetchOptions.body;
   }
+
+  const res = await fetch(url, fetchOptions);
+  const text = await res.text();
+
+  let data;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.error || "Request failed");
+  }
+
+  return data;
 }
 
-// =========================================================
-// AUTH APIs
-// =========================================================
-
+// =====================================================
+// AUTH
+// =====================================================
 export const loginUser = (body) =>
   safeRequest("/auth/login", {
     method: "POST",
@@ -65,64 +64,80 @@ export const forgotPassword = (body) =>
     body: JSON.stringify(body),
   });
 
-// =========================================================
-// PROFILE APIs
-// =========================================================
-
+// =====================================================
+// PROFILE
+// =====================================================
 export const getProfile = () =>
   safeRequest("/user/profile", {
-    method: "GET",
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
   });
 
 export const updateProfile = (body) =>
   safeRequest("/user/profile", {
     method: "PUT",
     body: JSON.stringify(body),
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
   });
 
 export const changePassword = (body) =>
   safeRequest("/user/change-password", {
     method: "POST",
     body: JSON.stringify(body),
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
   });
 
-// =========================================================
-// CLIENT CONFIG APIs (ALL 3 TABLES)
-// =========================================================
+// =====================================================
+// DASHBOARD – LAST UPDATED (PHL + PIT MONTHLY TABLES)
+// =====================================================
+export const fetchLastUpdated = (year, month) =>
+  safeRequest(`/lastupdated?year=${year}&month=${month}`);
 
-// Joined client list → all tables combined
-export const fetchClients = () => safeRequest("/clients");
+// =====================================================
+// CLIENT LIST / DETAILS
+// =====================================================
+export const fetchClients = () =>
+  safeRequest("/clients");
 
-// Raw tables
-export const fetchClientDetails = () => safeRequest("/client-details");
+export const fetchClientDetails = () =>
+  safeRequest("/client-details");
+
 export const fetchNotificationConfigs = () =>
   safeRequest("/notification-configs");
 
-// ⭐ BACKEND DEFAULT VALUES for AddClient / EditClient
-export const fetchClientDefaults = () => safeRequest("/client-defaults");
+export const fetchClientDefaults = () =>
+  safeRequest("/client-defaults");
 
-// Single client for EditClient
-export const getClient = (id) => safeRequest(`/client/${id}`);
+// =====================================================
+// CLIENT CRUD
+// =====================================================
+export const getClient = (id) =>
+  safeRequest(`/client/${id}`);
 
-// Create (all 3 tables)
 export const createClient = (data) =>
   safeRequest("/create-client", {
     method: "POST",
     body: JSON.stringify(data),
   });
 
-// Update (all 3 tables)
 export const updateClient = (id, data) =>
   safeRequest(`/update-client/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
 
-// Delete (all 3 tables)
 export const deleteClient = (id) =>
   safeRequest(`/delete-client/${id}`, {
     method: "DELETE",
   });
+
+// =====================================================
+// HEALTH CHECK
+// =====================================================
+export const apiHealth = () =>
+  safeRequest("/health");

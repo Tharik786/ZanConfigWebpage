@@ -4,7 +4,7 @@ import { useNavigate, Navigate, Link } from "react-router-dom";
 import "../styles/Login.css";
 
 const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000/api";
+  import.meta.env.VITE_API_BASE || "/api";
 
 export default function Login() {
   const navigate = useNavigate();

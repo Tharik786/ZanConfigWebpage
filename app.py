@@ -3,22 +3,152 @@ import mysql.connector
 from pathlib import Path
 import traceback
 import hashlib
+import os
 
-app = Flask(__name__, static_folder=None)
 
-# ---------------------------------------------------
-# DATABASE CONFIG
-# ---------------------------------------------------
-DB = {
-    "host": "localhost",
-    "user": "root",
-    "password": "tharik",
-    "database": "zanconfig",
+
+app = Flask(__name__)
+
+BASE_DIR = Path(__file__).resolve().parent
+DIST_DIR = BASE_DIR / "frontend" / "dist"
+
+# =====================================================
+# ENVIRONMENT
+# =====================================================
+APP_ENV = os.environ.get("APP_ENV", "prod").lower()
+
+# =====================================================
+# DATABASE CONFIGS
+# =====================================================
+
+PROD_DB = {
+    "host": "10.7.0.23",
+    "user": "tharik",
+    "password": "Tharik#25",
+    "port": 3306,
 }
 
+TEST_DB = {
+    "host": "108.248.232.249",
+    "user": "zanprduser",
+    "password": "Insp!ron154",
+    "database": "configpage",
+    "port": 3306,
+}
+
+# =====================================================
+# DB CONNECTION HELPERS
+# =====================================================
+def connect_prod():
+    return mysql.connector.connect(**PROD_DB)
+
+def connect_test():
+    return mysql.connector.connect(**TEST_DB)
+
+def connect_dashboard():
+    if APP_ENV == "prod":
+        return connect_prod()
+    return connect_test()
 
 def connect():
-    return mysql.connector.connect(**DB)
+    try:
+        return mysql.connector.connect(**TEST_DB)
+    except mysql.connector.Error as e:
+        print("Database connection failed")
+
+# =====================================================
+# UNION QUERY (SAFE VERSION)
+# =====================================================
+UNION_QUERY = """
+SELECT
+    'PHL' AS clientName,
+    DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS currentTime,
+    DATE_FORMAT((SELECT deviceTimestamp FROM phl.deviceStatus ORDER BY deviceTimestamp DESC LIMIT 1), '%Y-%m-%d %H:%i:%s') AS deviceStatusLastUpdated,
+    DATE_FORMAT((SELECT updatedTime FROM phl.peoplecountanalytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s') AS peopleLastUpdated,
+    DATE_FORMAT((SELECT updatedTime FROM phl.analytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s') AS analyticsLastUpdated,
+    DATE_FORMAT(
+        (SELECT updatedTime FROM flightDataHistory.{PHL_FLIGHT_TABLE}
+         ORDER BY updatedTime DESC LIMIT 1),
+        '%Y-%m-%d %H:%i:%s'
+    ) AS flightLastUpdated,
+    NULL AS trafficLastUpdated
+
+UNION ALL
+
+SELECT
+    'PIT',
+    DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT deviceTimestamp FROM pit.deviceStatus ORDER BY deviceTimestamp DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM pit.peoplecountanalytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM pit.analytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT(
+        (SELECT updatedTime FROM flightDataHistory.{PIT_FLIGHT_TABLE}
+         ORDER BY updatedTime DESC LIMIT 1),
+        '%Y-%m-%d %H:%i:%s'
+    ),
+    NULL
+
+UNION ALL
+
+SELECT
+    'APPLE',
+    DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT deviceTimestamp FROM apple.deviceStatus ORDER BY deviceTimestamp DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM apple.peoplecountanalytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM apple.analytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    NULL,
+    NULL
+
+UNION ALL
+
+SELECT
+    'DIAL',
+    DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT deviceTimestamp FROM dial.deviceStatus ORDER BY deviceTimestamp DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM dial.peoplecountanalytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM dial.analytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    NULL,
+    NULL
+
+UNION ALL
+
+SELECT
+    'TRAXMIA',
+    DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT deviceTimestamp FROM traxmia.deviceStatus ORDER BY deviceTimestamp DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM traxmia.peoplecountanalytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM traxmia.analytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    NULL,
+    NULL
+
+UNION ALL
+
+SELECT
+    'TAKEDA',
+    DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT deviceTimestamp FROM takeda.deviceStatus ORDER BY deviceTimestamp DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM takeda.peoplecountanalytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    DATE_FORMAT((SELECT updatedTime FROM takeda.analytics ORDER BY updatedTime DESC LIMIT 1), '%Y-%m-%d %H:%i:%s'),
+    NULL,
+    NULL
+
+UNION ALL
+
+SELECT
+    'ABMMIA',
+    DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'),
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    DATE_FORMAT(
+        (SELECT updatedTime FROM abmmia.intrafficDataAdvHistory
+         ORDER BY updatedTime DESC LIMIT 1),
+        '%Y-%m-%d %H:%i:%s'
+    )
+
+ORDER BY clientName;
+"""
 
 
 # ======================================================================
@@ -206,6 +336,111 @@ def alter_notification_numeric_columns_to_varchar():
         traceback.print_exc()
 
 
+def ensure_users_table():
+    """Create minimal users table required by auth routes."""
+    try:
+        db = connect()
+        cur = db.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(255) NOT NULL UNIQUE,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                password_hash VARCHAR(255) NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """
+        )
+        db.commit()
+        db.close()
+        print("✔ users table ensured")
+    except Exception:
+        traceback.print_exc()
+
+
+def ensure_clientappdetails_columns(cur):
+    """Add missing columns to clientappdetails without dropping data."""
+    columns = [
+        ("footerLogo", "ALTER TABLE clientappdetails ADD COLUMN footerLogo VARCHAR(255);"),
+    ]
+    for col, stmt in columns:
+        try:
+            cur.execute(stmt)
+        except Exception:
+            # ignore if column already exists
+            pass
+
+
+def ensure_client_details_columns(cur):
+    """Add missing columns to client_details without dropping data."""
+    alter_statements = [
+        ("soapDispenserEnabled", "ALTER TABLE client_details ADD COLUMN soapDispenserEnabled VARCHAR(45) DEFAULT 'True';"),
+        ("airFreshenerEnabled", "ALTER TABLE client_details ADD COLUMN airFreshenerEnabled VARCHAR(45) DEFAULT 'False';"),
+        ("cleanIndexEnabled", "ALTER TABLE client_details ADD COLUMN cleanIndexEnabled VARCHAR(45) DEFAULT 'True';"),
+        ("heatMapEnabled", "ALTER TABLE client_details ADD COLUMN heatMapEnabled VARCHAR(45) DEFAULT 'False';"),
+        ("schedulerEnabled", "ALTER TABLE client_details ADD COLUMN schedulerEnabled VARCHAR(45) DEFAULT 'False';"),
+        ("peopleCountEnabled", "ALTER TABLE client_details ADD COLUMN peopleCountEnabled VARCHAR(45) DEFAULT 'True';"),
+        ("typicalHighValue", "ALTER TABLE client_details ADD COLUMN typicalHighValue INT DEFAULT 5;"),
+        ("cleaningThreshold", "ALTER TABLE client_details ADD COLUMN cleaningThreshold INT DEFAULT 50;"),
+        ("feedbackAlertConfig", "ALTER TABLE client_details ADD COLUMN feedbackAlertConfig VARCHAR(45) DEFAULT '0,1';"),
+        ("beaconTimeInterval", "ALTER TABLE client_details ADD COLUMN beaconTimeInterval INT DEFAULT 2;"),
+        ("soapShots", "ALTER TABLE client_details ADD COLUMN soapShots INT DEFAULT 1000;"),
+        ("pumpPercentage", "ALTER TABLE client_details ADD COLUMN pumpPercentage INT DEFAULT 75;"),
+        ("soapPredictionIsEnabled", "ALTER TABLE client_details ADD COLUMN soapPredictionIsEnabled VARCHAR(45) DEFAULT 'False';"),
+        ("labelFlag", "ALTER TABLE client_details ADD COLUMN labelFlag VARCHAR(45) DEFAULT '3';"),
+        ("weatherEnabled", "ALTER TABLE client_details ADD COLUMN weatherEnabled VARCHAR(45) DEFAULT 'False';"),
+        ("language", "ALTER TABLE client_details ADD COLUMN language VARCHAR(45) DEFAULT 'English';"),
+        ("occupancyDurationLimit", "ALTER TABLE client_details ADD COLUMN occupancyDurationLimit INT DEFAULT 10;"),
+        ("passwordRotationInterval", "ALTER TABLE client_details ADD COLUMN passwordRotationInterval INT DEFAULT 0;"),
+        ("mfaFlag", "ALTER TABLE client_details ADD COLUMN mfaFlag INT DEFAULT 0;"),
+        ("pageReloadInterval", "ALTER TABLE client_details ADD COLUMN pageReloadInterval INT DEFAULT 60;"),
+        ("inspectionType", "ALTER TABLE client_details ADD COLUMN inspectionType INT DEFAULT 1;"),
+        ("defaultGradingflag", "ALTER TABLE client_details ADD COLUMN defaultGradingflag INT DEFAULT 1;"),
+        ("commentsLimit", "ALTER TABLE client_details ADD COLUMN commentsLimit INT DEFAULT 100;"),
+        ("janitorScheduleFlag", "ALTER TABLE client_details ADD COLUMN janitorScheduleFlag INT DEFAULT 0;"),
+        ("publisherType", "ALTER TABLE client_details ADD COLUMN publisherType VARCHAR(45) DEFAULT 'mqtt';"),
+        ("availableSensors", "ALTER TABLE client_details ADD COLUMN availableSensors VARCHAR(255) DEFAULT '';"),
+        ("feedbackType", "ALTER TABLE client_details ADD COLUMN feedbackType INT DEFAULT 2;"),
+        ("feedbackAlertOrder", "ALTER TABLE client_details ADD COLUMN feedbackAlertOrder INT DEFAULT 4;"),
+        ("feedbackDefaultTimeout", "ALTER TABLE client_details ADD COLUMN feedbackDefaultTimeout INT DEFAULT 20;"),
+        ("overViewStartTime", "ALTER TABLE client_details ADD COLUMN overViewStartTime VARCHAR(20) DEFAULT '12:00 AM';"),
+        ("cannedChartPeriod", "ALTER TABLE client_details ADD COLUMN cannedChartPeriod INT DEFAULT 60;"),
+        ("dataPostingType", "ALTER TABLE client_details ADD COLUMN dataPostingType VARCHAR(45) DEFAULT '';"),
+    ]
+    for col, stmt in alter_statements:
+        try:
+            cur.execute(stmt)
+        except Exception as e:
+            # Ignore errors for columns that already exist
+            if "Duplicate column name" not in str(e):
+                pass
+
+
+def ensure_notification_threshold_columns(cur):
+    """Add missing threshold columns to notificationconfiguration safely."""
+    statements = [
+        "ALTER TABLE notificationconfiguration ADD COLUMN deviceDataTimeInterval VARCHAR(500);",
+        "ALTER TABLE notificationconfiguration ADD COLUMN toiletPaperThreshold VARCHAR(400);",
+        "ALTER TABLE notificationconfiguration ADD COLUMN paperTowelThreshold VARCHAR(200);",
+        "ALTER TABLE notificationconfiguration ADD COLUMN trashThreshold VARCHAR(400);",
+        "ALTER TABLE notificationconfiguration ADD COLUMN areaAlertThreshold VARCHAR(300);",
+    ]
+    for stmt in statements:
+        try:
+            cur.execute(stmt)
+        except Exception:
+            # ignore if column already exists
+            pass
+
+
+def ensure_notification_extra_columns(cur):
+    """Add missing columns to notificationconfiguration without dropping data."""
+    try:
+        cur.execute("ALTER TABLE notificationconfiguration ADD COLUMN dispatchedInterval INT DEFAULT 0;")
+    except Exception:
+        pass
+
+
 # ======================================================================
 #  AUTO-CREATE TABLES WITH DEFAULTS
 # ======================================================================
@@ -227,6 +462,7 @@ def init_db():
                 defaultDisplayLanguage VARCHAR(50) DEFAULT 'English',
                 listOfDisplayLanguage TEXT,
                 headerLogo VARCHAR(255),
+                footerLogo VARCHAR(255),
                 poweredByLogo VARCHAR(255),
                 menuColor VARCHAR(50) DEFAULT '#141b4d',
                 subMenuColor VARCHAR(50) DEFAULT '272f69',
@@ -263,7 +499,39 @@ def init_db():
                 feedbackEnabled VARCHAR(45) DEFAULT 'True',
                 analyticsWeekEndRestrictionFlag VARCHAR(45) DEFAULT 'True',
                 trafficSensor VARCHAR(45) DEFAULT 'PeopleCount',
-                appViewType INT DEFAULT 1
+                appViewType INT DEFAULT 1,
+                soapDispenserEnabled VARCHAR(45) DEFAULT 'True',
+                airFreshenerEnabled VARCHAR(45) DEFAULT 'False',
+                cleanIndexEnabled VARCHAR(45) DEFAULT 'True',
+                heatMapEnabled VARCHAR(45) DEFAULT 'False',
+                schedulerEnabled VARCHAR(45) DEFAULT 'False',
+                peopleCountEnabled VARCHAR(45) DEFAULT 'True',
+                typicalHighValue INT DEFAULT 5,
+                cleaningThreshold INT DEFAULT 50,
+                feedbackAlertConfig VARCHAR(45) DEFAULT '0,1',
+                beaconTimeInterval INT DEFAULT 2,
+                soapShots INT DEFAULT 1000,
+                pumpPercentage INT DEFAULT 75,
+                soapPredictionIsEnabled VARCHAR(45) DEFAULT 'False',
+                labelFlag VARCHAR(45) DEFAULT '3',
+                weatherEnabled VARCHAR(45) DEFAULT 'False',
+                language VARCHAR(45) DEFAULT 'English',
+                occupancyDurationLimit INT DEFAULT 10,
+                passwordRotationInterval INT DEFAULT 0,
+                mfaFlag INT DEFAULT 0,
+                pageReloadInterval INT DEFAULT 60,
+                inspectionType INT DEFAULT 1,
+                defaultGradingflag INT DEFAULT 1,
+                commentsLimit INT DEFAULT 100,
+                janitorScheduleFlag INT DEFAULT 0,
+                publisherType VARCHAR(45) DEFAULT 'mqtt',
+                availableSensors VARCHAR(255) DEFAULT '',
+                feedbackType INT DEFAULT 2,
+                feedbackAlertOrder INT DEFAULT 4,
+                feedbackDefaultTimeout INT DEFAULT 20,
+                overViewStartTime VARCHAR(20) DEFAULT '12:00 AM',
+                cannedChartPeriod INT DEFAULT 60,
+                dataPostingType VARCHAR(45) DEFAULT ''
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """)
 
@@ -297,9 +565,26 @@ def init_db():
                 escalationLevel2Interval INT DEFAULT 0,
                 notCleanEscalationInterval INT DEFAULT 0,
                 cleaningScheduleFlag VARCHAR(10) DEFAULT 'False',
-                trafficAlert VARCHAR(10) DEFAULT 'True'
+                deviceDataTimeInterval VARCHAR(500),
+                toiletPaperThreshold VARCHAR(400),
+                paperTowelThreshold VARCHAR(200),
+                trashThreshold VARCHAR(400),
+                areaAlertThreshold VARCHAR(300),
+                trafficAlert VARCHAR(10) DEFAULT 'True',
+                dispatchedInterval INT DEFAULT 0
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """)
+
+        # -----------------------------------------------------
+        # USERS TABLE (for auth routes)
+        # -----------------------------------------------------
+        ensure_users_table()
+
+        # Ensure older databases pick up newly added columns
+        ensure_clientappdetails_columns(cur)
+        ensure_client_details_columns(cur)
+        ensure_notification_threshold_columns(cur)
+        ensure_notification_extra_columns(cur)
 
         db.commit()
         db.close()
@@ -568,7 +853,7 @@ def get_clients():
         cur = db.cursor(dictionary=True)
         cur.execute(
             """
-            SELECT 
+            SELECT DISTINCT
                 c.*,
                 d.dbName,
                 d.baseClient,
@@ -719,6 +1004,7 @@ def create_client_route():
 
         header_logo = data.get("headerLogo", "")
         powered_by_logo = data.get("poweredByLogo", "")
+        footer_logo = data.get("footerLogo", "")
         mobile_header_color = data.get("mobileHeaderColor", "")
         mobile_menu_bg_color = data.get("mobileMenuBgColor", "")
         alert = data.get("alert", "")
@@ -728,12 +1014,47 @@ def create_client_route():
 
         push_val = data.get("push", "True")
 
+        # Extended client_details fields
+        soap_dispenser_enabled = data.get("soapDispenserEnabled", "True")
+        air_freshener_enabled = data.get("airFreshenerEnabled", "False")
+        clean_index_enabled = data.get("cleanIndexEnabled", "True")
+        heat_map_enabled = data.get("heatMapEnabled", "False")
+        scheduler_enabled = data.get("schedulerEnabled", "False")
+        people_count_enabled = data.get("peopleCountEnabled", "True")
+        typical_high_value = data.get("typicalHighValue", 5)
+        cleaning_threshold = data.get("cleaningThreshold", 50)
+        feedback_alert_config = data.get("feedbackAlertConfig", "0,1")
+        beacon_time_interval = data.get("beaconTimeInterval", 2)
+        soap_shots = data.get("soapShots", 1000)
+        pump_percentage = data.get("pumpPercentage", 75)
+        soap_prediction_enabled = data.get("soapPredictionIsEnabled", "False")
+        label_flag = data.get("labelFlag", "3")
+        weather_enabled = data.get("weatherEnabled", "False")
+        language_val = data.get("language", "English")
+        occupancy_duration_limit = data.get("occupancyDurationLimit", 10)
+        password_rotation_interval = data.get("passwordRotationInterval", 0)
+        mfa_flag = data.get("mfaFlag", 0)
+        page_reload_interval = data.get("pageReloadInterval", 60)
+        inspection_type = data.get("inspectionType", 1)
+        default_grading_flag = data.get("defaultGradingflag", 1)
+        comments_limit = data.get("commentsLimit", 100)
+        janitor_schedule_flag = data.get("janitorScheduleFlag", 0)
+        publisher_type = data.get("publisherType", "mqtt")
+        available_sensors = data.get("availableSensors", "")
+        feedback_type = data.get("feedbackType", 2)
+        feedback_alert_order = data.get("feedbackAlertOrder", 4)
+        feedback_default_timeout = data.get("feedbackDefaultTimeout", 20)
+        overview_start_time = data.get("overViewStartTime", "12:00 AM")
+        canned_chart_period = data.get("cannedChartPeriod", 60)
+        data_posting_type = data.get("dataPostingType", "")
+
         # 5 NEW FIELDS – AddClient form → notificationconfiguration
         device_data_time_interval = data.get("deviceDataTimeInterval", "")
         toilet_paper_threshold = data.get("toiletPaperThreshold", "")
         paper_towel_threshold = data.get("paperTowelThreshold", "")
         trash_threshold = data.get("trashThreshold", "")
         area_alert_threshold = data.get("areaAlertThreshold", "")
+        dispatched_interval = data.get("dispatchedInterval", 0)
 
         db = connect()
         cur = db.cursor()
@@ -748,6 +1069,7 @@ def create_client_route():
                 defaultDisplayLanguage,
                 listOfDisplayLanguage,
                 headerLogo,
+                footerLogo,
                 poweredByLogo,
                 menuColor,
                 subMenuColor,
@@ -760,7 +1082,7 @@ def create_client_route():
                 productLogo,
                 homeBgColor,
                 homeLauncherLogo
-            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """,
             (
                 client_name,
@@ -769,6 +1091,7 @@ def create_client_route():
                 default_display_language,
                 list_disp,
                 header_logo,
+                footer_logo,
                 powered_by_logo,
                 menu_color,
                 sub_menu_color,
@@ -787,10 +1110,106 @@ def create_client_route():
         # 2) Insert into client_details (store baseClient + dbName)
         cur.execute(
             """
-            INSERT INTO client_details (clientName, baseClient, dbName)
-            VALUES (%s, %s, %s)
+            INSERT INTO client_details (
+                clientName,
+                baseClient,
+                dbName,
+                medianFlag,
+                stateMaintainHours,
+                recentAlertHours,
+                notificationListHours,
+                trashEnabled,
+                paperEnabled,
+                hvacEnabled,
+                waterFlowEnabled,
+                feedbackEnabled,
+                analyticsWeekEndRestrictionFlag,
+                trafficSensor,
+                appViewType,
+                soapDispenserEnabled,
+                airFreshenerEnabled,
+                cleanIndexEnabled,
+                heatMapEnabled,
+                schedulerEnabled,
+                peopleCountEnabled,
+                typicalHighValue,
+                cleaningThreshold,
+                feedbackAlertConfig,
+                beaconTimeInterval,
+                soapShots,
+                pumpPercentage,
+                soapPredictionIsEnabled,
+                labelFlag,
+                weatherEnabled,
+                language,
+                occupancyDurationLimit,
+                passwordRotationInterval,
+                mfaFlag,
+                pageReloadInterval,
+                inspectionType,
+                defaultGradingflag,
+                commentsLimit,
+                janitorScheduleFlag,
+                publisherType,
+                availableSensors,
+                feedbackType,
+                feedbackAlertOrder,
+                feedbackDefaultTimeout,
+                overViewStartTime,
+                cannedChartPeriod,
+                dataPostingType
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """,
-            (client_name, base_client, db_name),
+            (
+                client_name,
+                base_client,
+                db_name,
+                0,
+                24,
+                6,
+                24,
+                "True",
+                "True",
+                "False",
+                "True",
+                "True",
+                "True",
+                "PeopleCount",
+                1,
+                soap_dispenser_enabled,
+                air_freshener_enabled,
+                clean_index_enabled,
+                heat_map_enabled,
+                scheduler_enabled,
+                people_count_enabled,
+                typical_high_value,
+                cleaning_threshold,
+                feedback_alert_config,
+                beacon_time_interval,
+                soap_shots,
+                pump_percentage,
+                soap_prediction_enabled,
+                label_flag,
+                weather_enabled,
+                language_val,
+                occupancy_duration_limit,
+                password_rotation_interval,
+                mfa_flag,
+                page_reload_interval,
+                inspection_type,
+                default_grading_flag,
+                comments_limit,
+                janitor_schedule_flag,
+                publisher_type,
+                available_sensors,
+                feedback_type,
+                feedback_alert_order,
+                feedback_default_timeout,
+                overview_start_time,
+                canned_chart_period,
+                data_posting_type,
+            ),
         )
 
         # 3) Insert into notificationconfiguration (push + 5 new fields)
@@ -803,9 +1222,10 @@ def create_client_route():
                 toiletPaperThreshold,
                 paperTowelThreshold,
                 trashThreshold,
-                areaAlertThreshold
+                areaAlertThreshold,
+                dispatchedInterval
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 client_name,
@@ -815,6 +1235,7 @@ def create_client_route():
                 paper_towel_threshold,
                 trash_threshold,
                 area_alert_threshold,
+                dispatched_interval,
             ),
         )
 
@@ -874,12 +1295,47 @@ def update_client_route(id):
 
         push_val = data.get("push", "True")
 
+        # Extended client_details fields
+        soap_dispenser_enabled = data.get("soapDispenserEnabled", "True")
+        air_freshener_enabled = data.get("airFreshenerEnabled", "False")
+        clean_index_enabled = data.get("cleanIndexEnabled", "True")
+        heat_map_enabled = data.get("heatMapEnabled", "False")
+        scheduler_enabled = data.get("schedulerEnabled", "False")
+        people_count_enabled = data.get("peopleCountEnabled", "True")
+        typical_high_value = data.get("typicalHighValue", 5)
+        cleaning_threshold = data.get("cleaningThreshold", 50)
+        feedback_alert_config = data.get("feedbackAlertConfig", "0,1")
+        beacon_time_interval = data.get("beaconTimeInterval", 2)
+        soap_shots = data.get("soapShots", 1000)
+        pump_percentage = data.get("pumpPercentage", 75)
+        soap_prediction_enabled = data.get("soapPredictionIsEnabled", "False")
+        label_flag = data.get("labelFlag", "3")
+        weather_enabled = data.get("weatherEnabled", "False")
+        language_val = data.get("language", "English")
+        occupancy_duration_limit = data.get("occupancyDurationLimit", 10)
+        password_rotation_interval = data.get("passwordRotationInterval", 0)
+        mfa_flag = data.get("mfaFlag", 0)
+        page_reload_interval = data.get("pageReloadInterval", 60)
+        inspection_type = data.get("inspectionType", 1)
+        default_grading_flag = data.get("defaultGradingflag", 1)
+        comments_limit = data.get("commentsLimit", 100)
+        janitor_schedule_flag = data.get("janitorScheduleFlag", 0)
+        publisher_type = data.get("publisherType", "mqtt")
+        available_sensors = data.get("availableSensors", "")
+        feedback_type = data.get("feedbackType", 2)
+        feedback_alert_order = data.get("feedbackAlertOrder", 4)
+        feedback_default_timeout = data.get("feedbackDefaultTimeout", 20)
+        overview_start_time = data.get("overViewStartTime", "12:00 AM")
+        canned_chart_period = data.get("cannedChartPeriod", 60)
+        data_posting_type = data.get("dataPostingType", "")
+
         # 5 new fields
         device_data_time_interval = data.get("deviceDataTimeInterval", "")
         toilet_paper_threshold = data.get("toiletPaperThreshold", "")
         paper_towel_threshold = data.get("paperTowelThreshold", "")
         trash_threshold = data.get("trashThreshold", "")
         area_alert_threshold = data.get("areaAlertThreshold", "")
+        dispatched_interval = data.get("dispatchedInterval", 0)
 
         db = connect()
         cur = db.cursor()
@@ -935,10 +1391,79 @@ def update_client_route(id):
         cur.execute(
             """
             UPDATE client_details
-            SET baseClient=%s, dbName=%s
+            SET baseClient=%s,
+                dbName=%s,
+                soapDispenserEnabled=%s,
+                airFreshenerEnabled=%s,
+                cleanIndexEnabled=%s,
+                heatMapEnabled=%s,
+                schedulerEnabled=%s,
+                peopleCountEnabled=%s,
+                typicalHighValue=%s,
+                cleaningThreshold=%s,
+                feedbackAlertConfig=%s,
+                beaconTimeInterval=%s,
+                soapShots=%s,
+                pumpPercentage=%s,
+                soapPredictionIsEnabled=%s,
+                labelFlag=%s,
+                weatherEnabled=%s,
+                language=%s,
+                occupancyDurationLimit=%s,
+                passwordRotationInterval=%s,
+                mfaFlag=%s,
+                pageReloadInterval=%s,
+                inspectionType=%s,
+                defaultGradingflag=%s,
+                commentsLimit=%s,
+                janitorScheduleFlag=%s,
+                publisherType=%s,
+                availableSensors=%s,
+                feedbackType=%s,
+                feedbackAlertOrder=%s,
+                feedbackDefaultTimeout=%s,
+                overViewStartTime=%s,
+                cannedChartPeriod=%s,
+                dataPostingType=%s
             WHERE clientName=%s
             """,
-            (base_client, db_name, client_name),
+            (
+                base_client,
+                db_name,
+                soap_dispenser_enabled,
+                air_freshener_enabled,
+                clean_index_enabled,
+                heat_map_enabled,
+                scheduler_enabled,
+                people_count_enabled,
+                typical_high_value,
+                cleaning_threshold,
+                feedback_alert_config,
+                beacon_time_interval,
+                soap_shots,
+                pump_percentage,
+                soap_prediction_enabled,
+                label_flag,
+                weather_enabled,
+                language_val,
+                occupancy_duration_limit,
+                password_rotation_interval,
+                mfa_flag,
+                page_reload_interval,
+                inspection_type,
+                default_grading_flag,
+                comments_limit,
+                janitor_schedule_flag,
+                publisher_type,
+                available_sensors,
+                feedback_type,
+                feedback_alert_order,
+                feedback_default_timeout,
+                overview_start_time,
+                canned_chart_period,
+                data_posting_type,
+                client_name,
+            ),
         )
 
         # 3) Update notificationconfiguration (push + 5 fields)
@@ -951,7 +1476,8 @@ def update_client_route(id):
                 toiletPaperThreshold=%s,
                 paperTowelThreshold=%s,
                 trashThreshold=%s,
-                areaAlertThreshold=%s
+                areaAlertThreshold=%s,
+                dispatchedInterval=%s
             WHERE clientName=%s
             """,
             (
@@ -961,6 +1487,7 @@ def update_client_route(id):
                 paper_towel_threshold,
                 trash_threshold,
                 area_alert_threshold,
+                dispatched_interval,
                 client_name,
             ),
         )
@@ -1145,31 +1672,111 @@ def delete_client_route(id):
         traceback.print_exc()
         return jsonify({"ok": False, "error": str(e)}), 500
 
+    
+    # =====================================================
+# API – HEALTH
+# =====================================================
+@app.route("/api/health")
+def health():
+    return jsonify({
+        "ok": True,
+        "env": APP_ENV,
+        "db": "PROD_DB" if APP_ENV == "prod" else "TEST_DB"
+    })
 
-# ======================================================================
-#  SERVE REACT FRONTEND
-# ======================================================================
-BASE = Path(__file__).resolve().parent
-DIST = BASE.parent / "frontend" / "dist"
+# =====================================================
+# API – LAST UPDATED
+# =====================================================
+# @app.route("/api/lastupdated", methods=["GET"])
+# def last_updated():
+#     conn = None
+#     cur = None
+#     try:
+#         if APP_ENV == "prod":
+#             conn = connect_prod()
+#         elif APP_ENV == "test":
+#             conn = connect_test()
+#         else:
+#             return jsonify({"error": "Invalid APP_ENV"}), 500
+
+#         cur = conn.cursor(dictionary=True)
+#         cur.execute(UNION_QUERY)
+#         rows = cur.fetchall()
+#         return jsonify(rows), 200
+
+#     except Exception as e:
+#         traceback.print_exc()
+#         return jsonify({
+#             "error": "Failed to fetch data",
+#             "details": str(e)
+#         }), 500
+
+#     finally:
+#         if cur:
+#             cur.close()
+#         if conn:
+#             conn.close()
+@app.route("/api/lastupdated", methods=["GET"])
+def last_updated():
+    year = request.args.get("year")
+    month = request.args.get("month")
+
+    if not year or not month:
+        return jsonify([]), 200
+
+    month = str(month).zfill(2)
+
+    phl_flight_table = f"phl_depHistory_{year}_{month}"
+    pit_flight_table = f"pit_depHistory_{year}_{month}"
+
+    query = UNION_QUERY.format(
+        PHL_FLIGHT_TABLE=phl_flight_table,
+        PIT_FLIGHT_TABLE=pit_flight_table,
+    )
+
+    try:
+        conn = connect_dashboard()
+        cur = conn.cursor(dictionary=True)
+        cur.execute(query)
+        rows = cur.fetchall()
+        return jsonify(rows), 200
+
+    except Exception as e:
+        print("⚠ UNION ERROR:", e)
+        return jsonify([]), 200
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
-@app.route("/")
-def root():
-    return send_from_directory(DIST, "index.html")
+# =====================================================
+# SERVE REACT BUILD
+# =====================================================
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_react(path):
+    if path.startswith("api/"):
+        return jsonify({"error": "API route not found"}), 404
 
+    file_path = DIST_DIR / path
+    if path and file_path.exists():
+        return send_from_directory(DIST_DIR, path)
 
-@app.route("/<path:p>")
-def static_files(p):
-    f = DIST / p
-    if f.exists():
-        return send_from_directory(DIST, p)
-    # For React Router paths → always send index.html
-    return send_from_directory(DIST, "index.html")
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return send_from_directory(DIST_DIR, "index.html")
 
+    return (
+        "React build not found. "
+        "Run `cd frontend && npm run build`.",
+        500
+    )
 
-# ======================================================================
-#  RUN SERVER
-# ======================================================================
+# =====================================================
+# RUN SERVER
+# =====================================================
 if __name__ == "__main__":
-    init_db()
-    app.run(port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

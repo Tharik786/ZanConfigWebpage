@@ -8,7 +8,7 @@ export default function ForgotPassword() {
   const [err, setErr] = useState("");
 
   const API_BASE =
-    import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000/api";
+    import.meta.env.VITE_API_BASE || "/api";
 
   const handleSubmit = async (e) => {
     e.preventDefault();

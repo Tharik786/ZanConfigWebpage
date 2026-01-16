@@ -15,7 +15,6 @@ import FullClientTable from "../components/FullClientTable";
 import ClientDetailsTable from "../components/ClientDetailsTable";
 import NotificationConfigTable from "../components/NotificationConfigTable";
 
-import searchIcon from "../assets/search.png";
 import * as XLSX from "xlsx";
 
 export default function ClientList() {
@@ -324,7 +323,6 @@ export default function ClientList() {
 
       <div style={styles.topBar}>
         <div style={styles.searchWrapper}>
-          <img src={searchIcon} alt="search" style={styles.searchIcon} />
           <input
             type="text"
             placeholder="Search..."
